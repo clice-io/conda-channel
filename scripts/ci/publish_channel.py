@@ -51,7 +51,7 @@ def main() -> int:
 
     (channel_dir / "noarch").mkdir(parents=True, exist_ok=True)
 
-    subprocess.run(["uv", "pip", "install", "conda-index"], check=True)
+    subprocess.run(["uv", "pip", "install", "conda-index", "conda"], check=True)
     subprocess.run(
         ["uv", "run", "python", "-m", "conda_index", str(channel_dir), "--threads", threads],
         check=True,

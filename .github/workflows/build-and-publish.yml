@@ -62,6 +62,16 @@ jobs:
           recipe-path: ${{ matrix.recipe }}
           artifact-name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
           build-args: --target-platform ${{ matrix.target_platform }} --output-dir build_artifacts
+          upload-artifact: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
+          path: |
+            build_artifacts/**/*.conda
+            build_artifacts/**/*.tar.bz2
+          if-no-files-found: error
 
   # publish to channel
   publish:

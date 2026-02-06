@@ -21,12 +21,20 @@ build:
           -DLLVM_INCLUDE_TESTS=OFF \
           -DLLVM_INCLUDE_EXAMPLES=OFF \
           -DLLVM_INCLUDE_BENCHMARKS=OFF \
+          -DLLVM_ENABLE_ZLIB=OFF \
+          -DLLVM_ENABLE_ZSTD=OFF \
           -DLLVM_ENABLE_ASSERTIONS=OFF
         cmake --build build --target FileCheck --config Release
         install -d "${PREFIX}/bin"
         if [ -f "build/bin/FileCheck" ]; then cp build/bin/FileCheck "${PREFIX}/bin/"; fi
     - if: win
       then: |
+        if "%CC%"=="" (echo CC not set & exit /b 1)
+        if /I "%CC%"=="cl.exe" (
+          for /f "usebackq tokens=*" %%i in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALLDIR=%%i"
+          if not defined VSINSTALLDIR (echo Visual Studio not found & exit /b 1)
+          call "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars64.bat"
+        )
         cmake -S llvm -B build -G Ninja ^
           -DCMAKE_BUILD_TYPE=Release ^
           -DCMAKE_INSTALL_PREFIX=%LIBRARY_PREFIX% ^
@@ -34,6 +42,8 @@ build:
           -DLLVM_INCLUDE_TESTS=OFF ^
           -DLLVM_INCLUDE_EXAMPLES=OFF ^
           -DLLVM_INCLUDE_BENCHMARKS=OFF ^
+          -DLLVM_ENABLE_ZLIB=OFF ^
+          -DLLVM_ENABLE_ZSTD=OFF ^
           -DLLVM_ENABLE_ASSERTIONS=OFF
         cmake --build build --target FileCheck --config Release
         if not exist "%LIBRARY_PREFIX%\bin" mkdir "%LIBRARY_PREFIX%\bin"
@@ -46,15 +56,10 @@ build:
 
 requirements:
   build:
+    - ${{ compiler('c') }}
     - ${{ compiler('cxx') }}
     - cmake
     - ninja
-  host:
-    - zlib
-    - zstd
-  run:
-    - zlib
-    - zstd
 
 tests:
   - if: unix

@@ -1,0 +1,4 @@
+c_compiler:
+  - clang-cl  # [win]
+cxx_compiler:
+  - clang-cl  # [win]

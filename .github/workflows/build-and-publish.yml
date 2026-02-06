@@ -44,7 +44,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         run: python scripts/ci/detect_changed_targets.py
 
-  # build, using sccache
+  # build
   build:
     needs: detect
     if: needs.detect.outputs.has_changes == 'true'
@@ -52,29 +52,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
-    env:
-      USE_SCCACHE: "1"
-      SCCACHE_GHA_ENABLED: "false"
-      SCCACHE_DIR: ${{ github.workspace }}/.sccache
-      SCCACHE_CACHE_SIZE: "2G"
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
-        with:
-          version: "v0.7.7"
-
-      - name: Restore sccache cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-${{ github.sha }}
-          restore-keys: |
-            sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-
-            sccache-${{ runner.os }}-${{ matrix.target_platform }}-
-
 
       - name: Build package
         uses: prefix-dev/rattler-build-action@v0.2.34
@@ -82,9 +62,6 @@ jobs:
           recipe-path: ${{ matrix.recipe }}
           artifact-name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
           build-args: --target-platform ${{ matrix.target_platform }} --output-dir build_artifacts
-
-      - name: Show sccache stats
-        run: sccache --show-stats
 
   # publish to channel
   publish:

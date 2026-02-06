@@ -1,0 +1,117 @@
+name: build-and-publish-channel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "recipe/**"
+      - "scripts/ci/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute changed targets
+        id: set-matrix
+        env:
+          RECIPE_ROOT: recipe
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: python scripts/ci/detect_changed_targets.py
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.has_changes == 'true'
+    runs-on: ${{ matrix.os }}
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      USE_SCCACHE: "1"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare sccache
+        run: python scripts/ci/prepare_sccache_dir.py
+
+      - name: Restore sccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-
+            sccache-${{ runner.os }}-${{ matrix.target_platform }}-
+
+      - name: Build package
+        uses: prefix-dev/rattler-build-action@v0.2.34
+        with:
+          recipe-path: ${{ matrix.recipe }}
+          artifact-name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
+          build-args: |
+            --target-platform ${{ matrix.target_platform }}
+            --output-dir build_artifacts
+
+  publish:
+    needs: [detect, build]
+    if: ${{ github.ref == 'refs/heads/main' && needs.detect.outputs.has_changes == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Checkout Channel (gh-pages)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: channel
+          fetch-depth: 1
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Install uv and conda-index
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prepare channel and index
+        env:
+          CHANNEL_DIR: channel
+          ARTIFACTS_DIR: artifacts
+          CONDA_INDEX_THREADS: "4"
+        run: python scripts/ci/publish_channel.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: channel
+          publish_branch: gh-pages
+          commit_message: "Deploy channel: update packages [skip ci]"
+          force_orphan: false
+          keep_files: true

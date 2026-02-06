@@ -1,0 +1,74 @@
+context:
+  version: "21.1.8"
+
+package:
+  name: llvm-filecheck
+  version: ${{ version }}
+
+source:
+  url: https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ version }}/llvm-project-${{ version }}.src.tar.xz
+  sha256: d1d68f16c096a8b8c6f58925c7ae5e016213b3150fbfaaba560541a17ec8f34e
+
+build:
+  number: 0
+  script:
+    - if: unix
+      then: |
+        launcher_args=""
+        if [ "${USE_SCCACHE:-0}" = "1" ]; then
+          launcher_args="-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+        fi
+        cmake -S llvm -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+          ${launcher_args} \
+          -DLLVM_TARGETS_TO_BUILD="host" \
+          -DLLVM_INCLUDE_TESTS=OFF \
+          -DLLVM_INCLUDE_EXAMPLES=OFF \
+          -DLLVM_INCLUDE_BENCHMARKS=OFF \
+          -DLLVM_ENABLE_ASSERTIONS=OFF
+        cmake --build build --target FileCheck --config Release
+        install -d "${PREFIX}/bin"
+        if [ -f "build/bin/FileCheck" ]; then cp build/bin/FileCheck "${PREFIX}/bin/"; fi
+    - if: win
+      then: |
+        set "LAUNCHER_ARGS="
+        if "%USE_SCCACHE%"=="1" set "LAUNCHER_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+        cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%LIBRARY_PREFIX% %LAUNCHER_ARGS% -DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_ENABLE_ASSERTIONS=OFF
+        cmake --build build --target FileCheck --config Release
+        if not exist "%LIBRARY_PREFIX%\\bin" mkdir "%LIBRARY_PREFIX%\\bin"
+        if exist "build\\bin\\FileCheck.exe" copy /Y "build\\bin\\FileCheck.exe" "%LIBRARY_PREFIX%\\bin\\FileCheck.exe"
+
+requirements:
+  build:
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - sccache
+  host:
+    - zlib
+    - zstd
+  run:
+    - zlib
+    - zstd
+
+tests:
+  - script:
+      - if: unix
+        then:
+          - FileCheck --version
+          - printf "hello\n" > input.txt
+          - printf "CHECK: hello\n" > check.txt
+          - FileCheck check.txt < input.txt
+      - if: win
+        then:
+          - FileCheck --version
+          - echo hello> input.txt
+          - echo CHECK: hello> check.txt
+          - type input.txt | FileCheck check.txt
+
+about:
+  homepage: https://llvm.org/
+  license: Apache-2.0 WITH LLVM-exception
+  summary: LLVM FileCheck utility
+  repository: https://github.com/llvm/llvm-project

@@ -1,0 +1,15 @@
+[workspace]
+authors = ["fogsong233 kacent@clice.io>", "clice maintainer clice@clice.io"]
+channels = ["conda-forge"]
+name = "catter-conda-channel"
+platforms = ["win-64", "linux-64", "osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+build = "rattler-build build -r"
+index = "python -m conda_index channel"
+
+[dependencies]
+python = ">=3.11,<3.13"
+rattler-build = ">=0.57.0,<0.58"
+conda-index = ">=0.4.0"

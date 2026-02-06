@@ -1,0 +1,5 @@
+/.pixi/
+/output/
+/channel/
+/.sccache/
+.DS_Store

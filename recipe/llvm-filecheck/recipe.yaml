@@ -11,6 +11,10 @@ source:
 
 build:
   number: 0
+  script_env:
+    - SCCACHE_GHA_ENABLED
+    - ACTIONS_CACHE_URL
+    - ACTIONS_RUNTIME_TOKEN
   script:
     - if: unix
       then: |

@@ -17,51 +17,51 @@ permissions:
   contents: write
 
 jobs:
+  # detect changed targets
   detect:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_changes: ${{ steps.set-matrix.outputs.has_changes }}
     steps:
-      - name: Checkout
+      - name: Checkout Source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Compute changed targets
         id: set-matrix
         env:
-          RECIPE_ROOT: recipe
+          RECIPE_ROOT: "recipe"
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          GITHUB_SHA: ${{ github.sha }}
         run: python scripts/ci/detect_changed_targets.py
 
+  # build, using sccache
   build:
     needs: detect
     if: needs.detect.outputs.has_changes == 'true'
     runs-on: ${{ matrix.os }}
-    env:
-      SCCACHE_DIR: ${{ github.workspace }}/.sccache
-      USE_SCCACHE: "1"
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
     steps:
-      - name: Checkout
+      - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Prepare sccache
-        run: python scripts/ci/prepare_sccache_dir.py
-
-      - name: Restore sccache cache
-        uses: actions/cache@v4
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.7
         with:
-          path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-${{ github.sha }}
-          restore-keys: |
-            sccache-${{ runner.os }}-${{ matrix.target_platform }}-${{ matrix.target }}-
-            sccache-${{ runner.os }}-${{ matrix.target_platform }}-
+          version: "v0.7.7"
 
       - name: Build package
         uses: prefix-dev/rattler-build-action@v0.2.34
@@ -71,7 +71,15 @@ jobs:
           build-args: |
             --target-platform ${{ matrix.target_platform }}
             --output-dir build_artifacts
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: sccache
+          CMAKE_CXX_COMPILER_LAUNCHER: sccache
+          RUSTC_WRAPPER: sccache
 
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+  # publish to channel
   publish:
     needs: [detect, build]
     if: ${{ github.ref == 'refs/heads/main' && needs.detect.outputs.has_changes == 'true' }}
@@ -80,7 +88,7 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Checkout Channel (gh-pages)
+      - name: Checkout existing channel
         uses: actions/checkout@v4
         continue-on-error: true
         with:
@@ -94,12 +102,12 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Install uv and conda-index
+      - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
 
-      - name: Prepare channel and index
+      - name: Run Publish Script
         env:
           CHANNEL_DIR: channel
           ARTIFACTS_DIR: artifacts
@@ -113,5 +121,4 @@ jobs:
           publish_dir: channel
           publish_branch: gh-pages
           commit_message: "Deploy channel: update packages [skip ci]"
-          force_orphan: false
-          keep_files: true
+          force_orphan: true

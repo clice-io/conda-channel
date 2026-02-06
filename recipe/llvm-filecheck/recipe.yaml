@@ -58,17 +58,19 @@ requirements:
 
 tests:
   - if: unix
-    script: |
-      FileCheck --version
-      printf "hello\n" > input.txt
-      printf "CHECK: hello\n" > check.txt
-      FileCheck check.txt < input.txt
+    then:
+      script: |
+        FileCheck --version
+        printf "hello\n" > input.txt
+        printf "CHECK: hello\n" > check.txt
+        FileCheck check.txt < input.txt
   - if: win
-    script: |
-      FileCheck --version
-      echo hello> input.txt
-      echo CHECK: hello> check.txt
-      type input.txt | FileCheck check.txt
+    then:
+      script: |
+        FileCheck --version
+        echo hello> input.txt
+        echo CHECK: hello> check.txt
+        type input.txt | FileCheck check.txt
 
 about:
   homepage: https://llvm.org/

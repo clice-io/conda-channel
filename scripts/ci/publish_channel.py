@@ -16,6 +16,12 @@ def copy_tree(src: Path, dst: Path) -> None:
             shutil.copy2(item, target)
 
 
+def find_packages(root: Path) -> list[Path]:
+    packages = list(root.rglob("*.conda"))
+    packages.extend(root.rglob("*.tar.bz2"))
+    return packages
+
+
 def main() -> int:
     channel_dir = Path(os.environ.get("CHANNEL_DIR", "channel"))
     artifacts_dir = Path(os.environ.get("ARTIFACTS_DIR", "artifacts"))
@@ -28,8 +34,16 @@ def main() -> int:
 
     build_artifacts = artifacts_dir / "build_artifacts"
     if build_artifacts.is_dir():
+        packages = find_packages(build_artifacts)
+        if not packages:
+            print(f"No packages found under {build_artifacts}", file=sys.stderr)
+            return 1
         copy_tree(build_artifacts, channel_dir)
     elif artifacts_dir.is_dir():
+        packages = find_packages(artifacts_dir)
+        if not packages:
+            print(f"No packages found under {artifacts_dir}", file=sys.stderr)
+            return 1
         copy_tree(artifacts_dir, channel_dir)
     else:
         print(f"No artifacts found at {artifacts_dir}", file=sys.stderr)

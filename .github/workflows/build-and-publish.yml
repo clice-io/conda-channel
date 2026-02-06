@@ -61,7 +61,7 @@ jobs:
         with:
           recipe-path: ${{ matrix.recipe }}
           artifact-name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
-          build-args: --target-platform ${{ matrix.target_platform }} --output-dir build_artifacts
+          build-args: "--target-platform ${{ matrix.target_platform }} --output-dir build_artifacts"
           upload-artifact: false
 
       - name: Upload build artifacts
@@ -82,19 +82,32 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
+      - name: Check gh-pages branch
+        id: gh_pages
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout existing channel
+        if: steps.gh_pages.outputs.exists == 'true'
         uses: actions/checkout@v4
-        continue-on-error: true
         with:
           ref: gh-pages
           path: channel
           fetch-depth: 1
+
+      - name: Ensure channel directory
+        run: mkdir -p channel
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+          pattern: packages-*
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5

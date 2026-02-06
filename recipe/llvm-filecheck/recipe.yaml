@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ version }}/llvm-project-${{ version }}.src.tar.xz
-  sha256: d1d68f16c096a8b8c6f58925c7ae5e016213b3150fbfaaba560541a17ec8f34e
+  sha256: 4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142
 
 build:
   number: 0

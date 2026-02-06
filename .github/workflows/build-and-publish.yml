@@ -69,8 +69,8 @@ jobs:
         with:
           name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
           path: |
-            build_artifacts/**/*.conda
-            build_artifacts/**/*.tar.bz2
+            build_artifacts/${{ matrix.target_platform }}/*.conda
+            build_artifacts/${{ matrix.target_platform }}/*.tar.bz2
           if-no-files-found: error
 
   # publish to channel

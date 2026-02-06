@@ -11,37 +11,40 @@ source:
 
 build:
   number: 0
-  script_env:
-    - SCCACHE_GHA_ENABLED
-    - ACTIONS_CACHE_URL
-    - ACTIONS_RUNTIME_TOKEN
   script:
     - if: unix
-      then: |
-        launcher_args=""
-        if [ "${USE_SCCACHE:-0}" = "1" ]; then
-          launcher_args="-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-        fi
-        cmake -S llvm -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX=${PREFIX} \
-          ${launcher_args} \
-          -DLLVM_TARGETS_TO_BUILD="host" \
-          -DLLVM_INCLUDE_TESTS=OFF \
-          -DLLVM_INCLUDE_EXAMPLES=OFF \
-          -DLLVM_INCLUDE_BENCHMARKS=OFF \
-          -DLLVM_ENABLE_ASSERTIONS=OFF
-        cmake --build build --target FileCheck --config Release
-        install -d "${PREFIX}/bin"
-        if [ -f "build/bin/FileCheck" ]; then cp build/bin/FileCheck "${PREFIX}/bin/"; fi
+      then:
+        content: |
+          launcher_args=""
+          if [ "${USE_SCCACHE:-0}" = "1" ]; then
+            launcher_args="-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+          fi
+          cmake -S llvm -B build -G Ninja             -DCMAKE_BUILD_TYPE=Release             -DCMAKE_INSTALL_PREFIX=${PREFIX}             ${launcher_args}             -DLLVM_TARGETS_TO_BUILD="host"             -DLLVM_INCLUDE_TESTS=OFF             -DLLVM_INCLUDE_EXAMPLES=OFF             -DLLVM_INCLUDE_BENCHMARKS=OFF             -DLLVM_ENABLE_ASSERTIONS=OFF
+          cmake --build build --target FileCheck --config Release
+          install -d "${PREFIX}/bin"
+          if [ -f "build/bin/FileCheck" ]; then cp build/bin/FileCheck "${PREFIX}/bin/"; fi
+        env:
+          USE_SCCACHE: ${{ env.get("USE_SCCACHE", default="0") }}
+          SCCACHE_DIR: ${{ env.get("SCCACHE_DIR", default="") }}
+          SCCACHE_CACHE_SIZE: ${{ env.get("SCCACHE_CACHE_SIZE", default="") }}
+          SCCACHE_GHA_ENABLED: ${{ env.get("SCCACHE_GHA_ENABLED", default="false") }}
+          ACTIONS_CACHE_URL: ${{ env.get("ACTIONS_CACHE_URL", default="") }}
     - if: win
-      then: |
-        set "LAUNCHER_ARGS="
-        if "%USE_SCCACHE%"=="1" set "LAUNCHER_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-        cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%LIBRARY_PREFIX% %LAUNCHER_ARGS% -DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_ENABLE_ASSERTIONS=OFF
-        cmake --build build --target FileCheck --config Release
-        if not exist "%LIBRARY_PREFIX%\\bin" mkdir "%LIBRARY_PREFIX%\\bin"
-        if exist "build\\bin\\FileCheck.exe" copy /Y "build\\bin\\FileCheck.exe" "%LIBRARY_PREFIX%\\bin\\FileCheck.exe"
+      then:
+        content: |
+          set "LAUNCHER_ARGS="
+          if "%USE_SCCACHE%"=="1" set "LAUNCHER_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+          cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%LIBRARY_PREFIX% %LAUNCHER_ARGS% -DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_ENABLE_ASSERTIONS=OFF
+          cmake --build build --target FileCheck --config Release
+          if not exist "%LIBRARY_PREFIX%\bin" mkdir "%LIBRARY_PREFIX%\bin"
+          if exist "build\bin\FileCheck.exe" copy /Y "build\bin\FileCheck.exe" "%LIBRARY_PREFIX%\bin\FileCheck.exe"
+        env:
+          USE_SCCACHE: ${{ env.get("USE_SCCACHE", default="0") }}
+          SCCACHE_DIR: ${{ env.get("SCCACHE_DIR", default="") }}
+          SCCACHE_CACHE_SIZE: ${{ env.get("SCCACHE_CACHE_SIZE", default="") }}
+          SCCACHE_GHA_ENABLED: ${{ env.get("SCCACHE_GHA_ENABLED", default="false") }}
+          ACTIONS_CACHE_URL: ${{ env.get("ACTIONS_CACHE_URL", default="") }}
+
 
 requirements:
   build:

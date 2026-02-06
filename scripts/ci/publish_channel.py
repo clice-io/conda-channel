@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -51,9 +52,9 @@ def main() -> int:
 
     (channel_dir / "noarch").mkdir(parents=True, exist_ok=True)
 
-    subprocess.run(["uv", "pip", "install", "conda-index", "conda"], check=True)
+    conda_index_cmd = os.environ.get("CONDA_INDEX_CMD", "python -m conda_index")
     subprocess.run(
-        ["uv", "run", "python", "-m", "conda_index", str(channel_dir), "--threads", threads],
+        shlex.split(conda_index_cmd) + [str(channel_dir), "--threads", threads],
         check=True,
     )
     return 0

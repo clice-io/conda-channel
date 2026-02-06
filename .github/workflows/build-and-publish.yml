@@ -109,16 +109,21 @@ jobs:
           merge-multiple: true
           pattern: packages-*
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: "3.12"
+          environment-name: conda-index
+          create-args: >-
+            -c conda-forge
+            python=3.12
+            conda-index
 
       - name: Run Publish Script
         env:
           CHANNEL_DIR: channel
           ARTIFACTS_DIR: artifacts
           CONDA_INDEX_THREADS: "4"
+          CONDA_INDEX_CMD: "micromamba run -n conda-index python -m conda_index"
         run: python scripts/ci/publish_channel.py
 
       - name: Deploy to GitHub Pages

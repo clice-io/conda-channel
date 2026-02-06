@@ -23,6 +23,24 @@ def find_packages(root: Path) -> list[Path]:
     return packages
 
 
+KNOWN_PLATFORMS = ["linux-64", "win-64", "osx-arm64", "noarch"]
+
+
+def platform_from_name(name: str) -> str | None:
+    if name in KNOWN_PLATFORMS:
+        return name
+    for platform in KNOWN_PLATFORMS:
+        if name.endswith(f"-{platform}"):
+            return platform
+    return None
+
+
+def copy_packages(src: Path, dst: Path) -> None:
+    for pkg in find_packages(src):
+        dst.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(pkg, dst / pkg.name)
+
+
 def main() -> int:
     channel_dir = Path(os.environ.get("CHANNEL_DIR", "channel"))
     artifacts_dir = Path(os.environ.get("ARTIFACTS_DIR", "artifacts"))
@@ -41,11 +59,61 @@ def main() -> int:
             return 1
         copy_tree(build_artifacts, channel_dir)
     elif artifacts_dir.is_dir():
-        packages = find_packages(artifacts_dir)
-        if not packages:
+        root_packages = [
+            p
+            for p in artifacts_dir.iterdir()
+            if p.is_file() and (p.name.endswith(".conda") or p.name.endswith(".tar.bz2"))
+        ]
+        if root_packages:
+            print(
+                f"Packages were downloaded into {artifacts_dir} without platform subdirs. "
+                "Disable merge-multiple or keep platform folders in artifacts.",
+                file=sys.stderr,
+            )
+            return 1
+
+        found = False
+        # Case 1: artifacts/<platform>/...
+        for subdir in artifacts_dir.iterdir():
+            if not subdir.is_dir():
+                continue
+            platform = platform_from_name(subdir.name)
+            if not platform:
+                continue
+            if find_packages(subdir):
+                copy_packages(subdir, channel_dir / platform)
+                found = True
+
+        # Case 2: artifacts/<artifact-name>/... where name endswith platform
+        if not found:
+            for subdir in artifacts_dir.iterdir():
+                if not subdir.is_dir():
+                    continue
+                platform = platform_from_name(subdir.name)
+                if not platform:
+                    continue
+                if find_packages(subdir):
+                    copy_packages(subdir, channel_dir / platform)
+                    found = True
+
+        # Case 3: artifacts/<folder>/platform/... (e.g. upload/)
+        if not found:
+            for subdir in artifacts_dir.iterdir():
+                if not subdir.is_dir():
+                    continue
+                for platform_dir in subdir.iterdir():
+                    if not platform_dir.is_dir():
+                        continue
+                    platform = platform_from_name(platform_dir.name)
+                    if not platform:
+                        continue
+                    if find_packages(platform_dir):
+                        copy_packages(platform_dir, channel_dir / platform)
+                        found = True
+
+        if not found:
             print(f"No packages found under {artifacts_dir}", file=sys.stderr)
             return 1
-        copy_tree(artifacts_dir, channel_dir)
     else:
         print(f"No artifacts found at {artifacts_dir}", file=sys.stderr)
         return 1

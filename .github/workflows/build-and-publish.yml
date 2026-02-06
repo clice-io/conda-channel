@@ -81,9 +81,7 @@ jobs:
         with:
           recipe-path: ${{ matrix.recipe }}
           artifact-name: packages-${{ matrix.target }}-${{ matrix.target_platform }}
-          build-args: |
-            --target-platform ${{ matrix.target_platform }}
-            --output-dir build_artifacts
+          build-args: --target-platform ${{ matrix.target_platform }} --output-dir build_artifacts
 
       - name: Show sccache stats
         run: sccache --show-stats

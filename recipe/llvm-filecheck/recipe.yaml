@@ -65,9 +65,9 @@ requirements:
     - llvm-tools ==20.1.8  # [osx]
     - compiler-rt ==20.1.8  # [osx]
   host:
-    - libcxx ${{ c_stdlib_version }}  # [osx]
+    - libcxx ==${{ c_stdlib_version }}  # [osx]
   run:
-    - libcxx ${{ c_stdlib_version }}  # [osx]
+    - libcxx ==${{ c_stdlib_version }}  # [osx]
 
 tests:
   - if: unix

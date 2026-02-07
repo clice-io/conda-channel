@@ -1,4 +1,24 @@
 c_compiler:
   - clang-cl  # [win]
+  - clang  # [osx]
+  - gcc  # [linux]
+
 cxx_compiler:
   - clang-cl  # [win]
+  - clangxx  # [osx]
+  - gxx  # [linux]
+
+c_compiler_version:
+  - 20.1.8  # [osx]
+  - 14.2.0  # [linux]
+
+cxx_compiler_version:
+  - 20.1.8  # [osx]
+  - 14.2.0  # [linux]
+
+c_stdlib:
+  - libcxx  # [osx]
+
+c_stdlib_version:
+  - 20.1.8  # [osx]
+  - 21.1.8  # [osx]

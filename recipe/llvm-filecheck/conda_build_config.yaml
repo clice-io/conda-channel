@@ -20,5 +20,5 @@ c_stdlib:
   - libcxx  # [osx]
 
 c_stdlib_version:
-  - 20.1.8  # [osx]
-  - 21.1.8  # [osx]
+  - "==20.1.8"  # [osx]
+  - "==21.1.8"  # [osx]

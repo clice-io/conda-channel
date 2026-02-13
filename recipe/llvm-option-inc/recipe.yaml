@@ -27,7 +27,7 @@ build:
         cmake --build build --target llvm-tblgen --config Release
 
         TBLGEN="build/bin/llvm-tblgen"
-        OUT_DIR="${PREFIX}/lib/llvm-option-inc"
+        OUT_DIR="${PREFIX}/include/llvm-options-td"
         install -d "${OUT_DIR}"
 
         "${TBLGEN}" -gen-opt-parser-defs -I llvm/include -I clang/include \
@@ -55,14 +55,6 @@ build:
           llvm/lib/ToolDrivers/llvm-dlltool/Options.td \
           -o "${OUT_DIR}/llvm-dlltool-Options.inc"
 
-        install -m 0644 clang/include/clang/Driver/Options.td "${OUT_DIR}/clang-Driver-Options.td"
-        install -m 0644 lld/ELF/Options.td "${OUT_DIR}/lld-ELF-Options.td"
-        install -m 0644 lld/COFF/Options.td "${OUT_DIR}/lld-COFF-Options.td"
-        install -m 0644 lld/MachO/Options.td "${OUT_DIR}/lld-MachO-Options.td"
-        install -m 0644 lld/MinGW/Options.td "${OUT_DIR}/lld-MinGW-Options.td"
-        install -m 0644 lld/wasm/Options.td "${OUT_DIR}/lld-wasm-Options.td"
-        install -m 0644 llvm/lib/ToolDrivers/llvm-lib/Options.td "${OUT_DIR}/llvm-lib-Options.td"
-        install -m 0644 llvm/lib/ToolDrivers/llvm-dlltool/Options.td "${OUT_DIR}/llvm-dlltool-Options.td"
     - if: win
       then: |
         if "%CC%"=="" (echo CC not set & exit /b 1)
@@ -89,7 +81,7 @@ build:
         if exist "build\Release\bin\llvm-tblgen.exe" set "TBLGEN=build\Release\bin\llvm-tblgen.exe"
         if "%TBLGEN%"=="" (echo llvm-tblgen.exe not found & exit /b 1)
 
-        set "OUT_DIR=%LIBRARY_PREFIX%\lib\llvm-option-inc"
+        set "OUT_DIR=%LIBRARY_PREFIX%\include\llvm-options-td"
         if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 
         "%TBLGEN%" -gen-opt-parser-defs -I llvm\include -I clang\include clang\include\clang\Driver\Options.td -o "%OUT_DIR%\clang-Driver-Options.inc" || exit /b 1
@@ -101,14 +93,6 @@ build:
         "%TBLGEN%" -gen-opt-parser-defs -I llvm\include llvm\lib\ToolDrivers\llvm-lib\Options.td -o "%OUT_DIR%\llvm-lib-Options.inc" || exit /b 1
         "%TBLGEN%" -gen-opt-parser-defs -I llvm\include llvm\lib\ToolDrivers\llvm-dlltool\Options.td -o "%OUT_DIR%\llvm-dlltool-Options.inc" || exit /b 1
 
-        copy /Y "clang\include\clang\Driver\Options.td" "%OUT_DIR%\clang-Driver-Options.td" >nul
-        copy /Y "lld\ELF\Options.td" "%OUT_DIR%\lld-ELF-Options.td" >nul
-        copy /Y "lld\COFF\Options.td" "%OUT_DIR%\lld-COFF-Options.td" >nul
-        copy /Y "lld\MachO\Options.td" "%OUT_DIR%\lld-MachO-Options.td" >nul
-        copy /Y "lld\MinGW\Options.td" "%OUT_DIR%\lld-MinGW-Options.td" >nul
-        copy /Y "lld\wasm\Options.td" "%OUT_DIR%\lld-wasm-Options.td" >nul
-        copy /Y "llvm\lib\ToolDrivers\llvm-lib\Options.td" "%OUT_DIR%\llvm-lib-Options.td" >nul
-        copy /Y "llvm\lib\ToolDrivers\llvm-dlltool\Options.td" "%OUT_DIR%\llvm-dlltool-Options.td" >nul
 
 requirements:
   build:
@@ -131,25 +115,25 @@ tests:
   - if: unix
     then:
       script: |
-        test -f "${PREFIX}/lib/llvm-option-inc/clang-Driver-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/lld-ELF-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/lld-COFF-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/lld-MachO-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/lld-MinGW-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/lld-wasm-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/llvm-lib-Options.inc"
-        test -f "${PREFIX}/lib/llvm-option-inc/llvm-dlltool-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/clang-Driver-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/lld-ELF-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/lld-COFF-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/lld-MachO-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/lld-MinGW-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/lld-wasm-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/llvm-lib-Options.inc"
+        test -f "${PREFIX}/include/llvm-options-td/llvm-dlltool-Options.inc"
   - if: win
     then:
       script: |
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\clang-Driver-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-ELF-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-COFF-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-MachO-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-MinGW-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-wasm-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\llvm-lib-Options.inc" exit /b 1
-        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\llvm-dlltool-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\clang-Driver-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\lld-ELF-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\lld-COFF-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\lld-MachO-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\lld-MinGW-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\lld-wasm-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\llvm-lib-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\include\llvm-options-td\llvm-dlltool-Options.inc" exit /b 1
 
 about:
   homepage: https://llvm.org/

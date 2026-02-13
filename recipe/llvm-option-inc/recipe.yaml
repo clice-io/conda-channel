@@ -1,0 +1,158 @@
+context:
+  version: "20.1.8"
+
+package:
+  name: llvm-option-inc
+  version: ${{ version }}
+
+source:
+  url: https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ version }}/llvm-project-${{ version }}.src.tar.xz
+  sha256: 6898f963c8e938981e6c4a302e83ec5beb4630147c7311183cf61069af16333d
+
+build:
+  number: 0
+  script:
+    - if: unix
+      then: |
+        set -euxo pipefail
+        cmake -S llvm -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DLLVM_TARGETS_TO_BUILD=host \
+          -DLLVM_INCLUDE_TESTS=OFF \
+          -DLLVM_INCLUDE_EXAMPLES=OFF \
+          -DLLVM_INCLUDE_BENCHMARKS=OFF \
+          -DLLVM_ENABLE_ZLIB=OFF \
+          -DLLVM_ENABLE_ZSTD=OFF \
+          -DLLVM_ENABLE_ASSERTIONS=OFF
+        cmake --build build --target llvm-tblgen --config Release
+
+        TBLGEN="build/bin/llvm-tblgen"
+        OUT_DIR="${PREFIX}/lib/llvm-option-inc"
+        install -d "${OUT_DIR}"
+
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include -I clang/include \
+          clang/include/clang/Driver/Options.td \
+          -o "${OUT_DIR}/clang-Driver-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          lld/ELF/Options.td \
+          -o "${OUT_DIR}/lld-ELF-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          lld/COFF/Options.td \
+          -o "${OUT_DIR}/lld-COFF-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          lld/MachO/Options.td \
+          -o "${OUT_DIR}/lld-MachO-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          lld/MinGW/Options.td \
+          -o "${OUT_DIR}/lld-MinGW-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          lld/wasm/Options.td \
+          -o "${OUT_DIR}/lld-wasm-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          llvm/lib/ToolDrivers/llvm-lib/Options.td \
+          -o "${OUT_DIR}/llvm-lib-Options.inc"
+        "${TBLGEN}" -gen-opt-parser-defs -I llvm/include \
+          llvm/lib/ToolDrivers/llvm-dlltool/Options.td \
+          -o "${OUT_DIR}/llvm-dlltool-Options.inc"
+
+        install -m 0644 clang/include/clang/Driver/Options.td "${OUT_DIR}/clang-Driver-Options.td"
+        install -m 0644 lld/ELF/Options.td "${OUT_DIR}/lld-ELF-Options.td"
+        install -m 0644 lld/COFF/Options.td "${OUT_DIR}/lld-COFF-Options.td"
+        install -m 0644 lld/MachO/Options.td "${OUT_DIR}/lld-MachO-Options.td"
+        install -m 0644 lld/MinGW/Options.td "${OUT_DIR}/lld-MinGW-Options.td"
+        install -m 0644 lld/wasm/Options.td "${OUT_DIR}/lld-wasm-Options.td"
+        install -m 0644 llvm/lib/ToolDrivers/llvm-lib/Options.td "${OUT_DIR}/llvm-lib-Options.td"
+        install -m 0644 llvm/lib/ToolDrivers/llvm-dlltool/Options.td "${OUT_DIR}/llvm-dlltool-Options.td"
+    - if: win
+      then: |
+        if "%CC%"=="" (echo CC not set & exit /b 1)
+        if /I "%CC%"=="cl.exe" (
+          for /f "usebackq tokens=*" %%i in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALLDIR=%%i"
+          if not defined VSINSTALLDIR (echo Visual Studio not found & exit /b 1)
+          call "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars64.bat"
+        )
+
+        cmake -S llvm -B build -G Ninja ^
+          -DCMAKE_BUILD_TYPE=Release ^
+          -DLLVM_TARGETS_TO_BUILD=host ^
+          -DLLVM_INCLUDE_TESTS=OFF ^
+          -DLLVM_INCLUDE_EXAMPLES=OFF ^
+          -DLLVM_INCLUDE_BENCHMARKS=OFF ^
+          -DLLVM_ENABLE_ZLIB=OFF ^
+          -DLLVM_ENABLE_ZSTD=OFF ^
+          -DLLVM_ENABLE_ASSERTIONS=OFF
+        cmake --build build --target llvm-tblgen --config Release
+
+        set "TBLGEN="
+        if exist "build\bin\llvm-tblgen.exe" set "TBLGEN=build\bin\llvm-tblgen.exe"
+        if exist "build\bin\Release\llvm-tblgen.exe" set "TBLGEN=build\bin\Release\llvm-tblgen.exe"
+        if exist "build\Release\bin\llvm-tblgen.exe" set "TBLGEN=build\Release\bin\llvm-tblgen.exe"
+        if "%TBLGEN%"=="" (echo llvm-tblgen.exe not found & exit /b 1)
+
+        set "OUT_DIR=%LIBRARY_PREFIX%\lib\llvm-option-inc"
+        if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
+
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include -I clang\include clang\include\clang\Driver\Options.td -o "%OUT_DIR%\clang-Driver-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include lld\ELF\Options.td -o "%OUT_DIR%\lld-ELF-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include lld\COFF\Options.td -o "%OUT_DIR%\lld-COFF-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include lld\MachO\Options.td -o "%OUT_DIR%\lld-MachO-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include lld\MinGW\Options.td -o "%OUT_DIR%\lld-MinGW-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include lld\wasm\Options.td -o "%OUT_DIR%\lld-wasm-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include llvm\lib\ToolDrivers\llvm-lib\Options.td -o "%OUT_DIR%\llvm-lib-Options.inc" || exit /b 1
+        "%TBLGEN%" -gen-opt-parser-defs -I llvm\include llvm\lib\ToolDrivers\llvm-dlltool\Options.td -o "%OUT_DIR%\llvm-dlltool-Options.inc" || exit /b 1
+
+        copy /Y "clang\include\clang\Driver\Options.td" "%OUT_DIR%\clang-Driver-Options.td" >nul
+        copy /Y "lld\ELF\Options.td" "%OUT_DIR%\lld-ELF-Options.td" >nul
+        copy /Y "lld\COFF\Options.td" "%OUT_DIR%\lld-COFF-Options.td" >nul
+        copy /Y "lld\MachO\Options.td" "%OUT_DIR%\lld-MachO-Options.td" >nul
+        copy /Y "lld\MinGW\Options.td" "%OUT_DIR%\lld-MinGW-Options.td" >nul
+        copy /Y "lld\wasm\Options.td" "%OUT_DIR%\lld-wasm-Options.td" >nul
+        copy /Y "llvm\lib\ToolDrivers\llvm-lib\Options.td" "%OUT_DIR%\llvm-lib-Options.td" >nul
+        copy /Y "llvm\lib\ToolDrivers\llvm-dlltool\Options.td" "%OUT_DIR%\llvm-dlltool-Options.td" >nul
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - if: linux
+      then: sysroot_linux-64 ==2.17
+    - if: osx
+      then:
+        - lld ==20.1.8
+        - llvm-tools ==20.1.8
+        - compiler-rt ==20.1.8
+  host:
+    - if: osx
+      then: libcxx ${{ c_stdlib_version }}
+
+tests:
+  - if: unix
+    then:
+      script: |
+        test -f "${PREFIX}/lib/llvm-option-inc/clang-Driver-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/lld-ELF-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/lld-COFF-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/lld-MachO-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/lld-MinGW-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/lld-wasm-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/llvm-lib-Options.inc"
+        test -f "${PREFIX}/lib/llvm-option-inc/llvm-dlltool-Options.inc"
+  - if: win
+    then:
+      script: |
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\clang-Driver-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-ELF-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-COFF-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-MachO-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-MinGW-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\lld-wasm-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\llvm-lib-Options.inc" exit /b 1
+        if not exist "%LIBRARY_PREFIX%\lib\llvm-option-inc\llvm-dlltool-Options.inc" exit /b 1
+
+about:
+  homepage: https://llvm.org/
+  license: Apache-2.0 WITH LLVM-exception
+  summary: Generated LLVM/Clang/LLD option parser .inc files from TableGen
+  repository: https://github.com/llvm/llvm-project
